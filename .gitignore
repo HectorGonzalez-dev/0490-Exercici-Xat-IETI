@@ -9,3 +9,6 @@ target/
 
 # macOS
 .DS_Store
+
+# Otros
+ruta.md
