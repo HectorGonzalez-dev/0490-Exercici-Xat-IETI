@@ -20,12 +20,14 @@ public class ChatService {
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
+    /* 
     public static void main(String[] args) {
         ChatService service = new ChatService();
         System.out.println(service.sendMessage("Hola, responde en una frase"));
     }
+    */
 
-    private String sendMessage(String message) {
+    public String sendMessage(String message) {
         try {
 
             String jsonBody = buildRequestJson(message);

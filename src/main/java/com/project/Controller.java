@@ -14,6 +14,8 @@ import javafx.event.ActionEvent;
 
 public class Controller implements Initializable {
 
+    private final ChatService chatService = new ChatService();
+
     @FXML
     private ScrollPane scrollPane;
 
@@ -35,11 +37,24 @@ public class Controller implements Initializable {
     private void sendMessage(ActionEvent event) {
         String msg = textField.getText().trim();
         if (!msg.isEmpty()) {
-            textInfo.setText(textInfo.getText() + msg + "\n");
+            textInfo.setText(textInfo.getText() + "Tú: " + msg + "\n");
             scrollPane.setVvalue(1.0);
             textField.clear();
+            textField.requestFocus();
+            
+            // Respuesta de la IA
+            String reply = chatService.sendMessage(msg);
+
+            if (reply != null) {
+                textInfo.setText(textInfo.getText() + "IETI: " + reply + "\n");
+            } else {
+                textInfo.setText(textInfo.getText() + "No se pudo obtener respuesta.\n");
+            }
+            scrollPane.setVvalue(1.0);
+
+        } else {
+            textField.requestFocus();
         }
-        textField.requestFocus();
     }
 
 }
