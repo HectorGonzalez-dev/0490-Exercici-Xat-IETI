@@ -10,11 +10,13 @@ import javafx.scene.text.Text;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 
 public class Controller implements Initializable {
 
     private final ChatService chatService = new ChatService();
+    private boolean isWaiting = false;
 
     @FXML
     private ScrollPane scrollPane;
@@ -35,22 +37,34 @@ public class Controller implements Initializable {
 
     @FXML
     private void sendMessage(ActionEvent event) {
+
+        if (isWaiting) {
+            return;
+        }
+
         String msg = textField.getText().trim();
         if (!msg.isEmpty()) {
             textInfo.setText(textInfo.getText() + "Tú: " + msg + "\n");
             scrollPane.setVvalue(1.0);
             textField.clear();
             textField.requestFocus();
-            
-            // Respuesta de la IA
-            String reply = chatService.sendMessage(msg);
+            isWaiting = true;
+            buttonSend.setDisable(true);
 
-            if (reply != null) {
-                textInfo.setText(textInfo.getText() + "IETI: " + reply + "\n");
-            } else {
-                textInfo.setText(textInfo.getText() + "No se pudo obtener respuesta.\n");
-            }
-            scrollPane.setVvalue(1.0);
+            // Respuesta de la IA
+            chatService.sendMessage(msg).whenComplete((reply, ex) ->
+                    Platform.runLater(() -> {
+                        if (ex != null || reply == null) {
+                            textInfo.setText(textInfo.getText() + "No se pudo obtener respuesta.\n");
+                        } else {
+                            textInfo.setText(textInfo.getText() + "IETI: " + reply + "\n");
+                        }
+                        scrollPane.setVvalue(1.0);
+
+                        isWaiting = false;
+                        buttonSend.setDisable(false);
+                        textField.requestFocus();
+                    }));
 
         } else {
             textField.requestFocus();

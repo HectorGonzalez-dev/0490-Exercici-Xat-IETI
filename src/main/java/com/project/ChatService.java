@@ -7,6 +7,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -27,7 +28,7 @@ public class ChatService {
     }
     */
 
-    public String sendMessage(String message) {
+    public CompletableFuture<String> sendMessage(String message) {
         try {
 
             String jsonBody = buildRequestJson(message);
@@ -39,28 +40,31 @@ public class ChatService {
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                System.err.println("Error HTTP: " + response.statusCode());
-                System.err.println("Detalle: " + response.body());
-                return null;
-            }
-
-            JSONObject json = new JSONObject(response.body());
-
-            String textResponse = json.getJSONArray("choices")
-                                      .getJSONObject(0)
-                                      .getJSONObject("message")
-                                      .getString("content");
-
-            return textResponse;
-        } catch (IOException | InterruptedException e) {
+            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                             .thenApply(response -> extractText(response))
+                             .exceptionally(ex -> "No se pudo obtener respuesta. (" + ex.getMessage() + ")");
+        } catch (Exception e) {
             System.err.println("Error al enviar el mensaje: " + e.getMessage());
             return null;
         }
     }
 
+    private String extractText(HttpResponse<String> response) {
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            System.err.println("Error HTTP: " + response.statusCode());
+            System.err.println("Detalle: " + response.body());
+            return null;
+        }
+
+        JSONObject json = new JSONObject(response.body());
+
+        String textResponse = json.getJSONArray("choices")
+                                    .getJSONObject(0)
+                                    .getJSONObject("message")
+                                    .getString("content");
+
+        return textResponse;
+    }
 
     private String buildRequestJson(String message) {
         JSONArray messages = new JSONArray();
