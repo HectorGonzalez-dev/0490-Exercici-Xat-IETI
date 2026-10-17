@@ -12,3 +12,6 @@ target/
 
 # Otros
 teoria
+
+# Config local
+src/main/resources/config.properties
