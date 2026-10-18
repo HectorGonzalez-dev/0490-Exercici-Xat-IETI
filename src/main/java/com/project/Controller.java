@@ -3,9 +3,12 @@ package com.project;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
-import javafx.scene.text.Text;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 
 import java.io.File;
@@ -25,11 +28,14 @@ public class Controller implements Initializable {
     private File selectedImage = null;
     private String base64 = null;
 
+    // Referencia al Label del cuerpo durante el streaming de la IA
+    private Label cuerpoIETIActual = null;
+
     @FXML
     private ScrollPane scrollPane;
 
     @FXML
-    private Text textInfo;
+    private VBox historial;
 
     @FXML
     private TextField textField;
@@ -73,6 +79,34 @@ public class Controller implements Initializable {
         }
     }
 
+    private void agregarMensaje(String autor, String texto) {
+        agregarMensaje(autor, texto, null);
+    }
+
+    private void agregarMensaje(String autor, String texto, Image imagen) {
+        VBox contenedor = new VBox(4.0);
+
+        Label lblAutor = new Label(autor);
+        lblAutor.setStyle("-fx-font-size: 15px; -fx-font-weight: bold;");
+
+        Label lblTexto = new Label(texto);
+        lblTexto.setStyle("-fx-font-size: 13px;");
+        lblTexto.setWrapText(true);
+
+        contenedor.getChildren().addAll(lblAutor, lblTexto);
+
+        if (imagen != null) {
+            ImageView imageView = new ImageView(imagen);
+            imageView.setFitWidth(200);
+            imageView.setFitHeight(200);
+            imageView.setPreserveRatio(true);
+            contenedor.getChildren().add(imageView);
+        }
+
+        historial.getChildren().add(contenedor);
+        scrollPane.setVvalue(1.0);
+    }
+
     @FXML
     private void sendMessage(ActionEvent event) {
 
@@ -82,21 +116,28 @@ public class Controller implements Initializable {
 
         String msg = textField.getText().trim();
         if (!msg.isEmpty()) {
-            textInfo.setText(textInfo.getText() + "Tú: " + msg + "\n");
+            // Mensaje del usuario (con miniatura si hay imagen seleccionada)
+            Image imagen = null;
+            if (selectedImage != null) {
+                imagen = new Image(selectedImage.toURI().toString());
+            }
+            agregarMensaje("Tú:", msg, imagen);
             scrollPane.setVvalue(1.0);
             textField.clear();
             textField.requestFocus();
             isWaiting = true;
             buttonSend.setDisable(true);
+            cuerpoIETIActual = null;
 
             // Respuesta de la IA asincrona
             if (base64 != null) {
+                // Se envía la imagen
                 chatService.sendMessageWithImage(msg, base64).whenComplete((reply, ex) ->
                         Platform.runLater(() -> {
                             if (ex != null) {
-                                textInfo.setText(textInfo.getText() + "No se pudo obtener respuesta.\n");
+                                agregarMensaje("IETI:", "No se pudo obtener respuesta.\n");
                             } else {
-                                textInfo.setText(textInfo.getText() + "IETI: " + reply + "\n");
+                                agregarMensaje("IETI:", reply + "\n");
                             }
                             scrollPane.setVvalue(1.0);
                             base64 = null;
@@ -105,33 +146,47 @@ public class Controller implements Initializable {
                             buttonSend.setDisable(false);
                         }));
             } else {
-                // Array boolean[] porque Java no permite reasignar una variable local normal dentro de un lambda
-                boolean[] primeraVez = {true};
-
-                chatService.streamMessage(msg, fragment -> 
+                // Streaming de respuesta solo texto
+                chatService.streamMessage(msg, fragment ->
                     Platform.runLater(() -> {
-                            if (primeraVez[0]) {
-                                textInfo.setText(textInfo.getText() + "IETI: " + fragment);
-                                primeraVez[0] = false;
-                            } else {
-                                textInfo.setText(textInfo.getText() + fragment);
-                            }
-                            scrollPane.setVvalue(1.0);
-                        })
+                        if (cuerpoIETIActual == null) {
+                            VBox contenedor = new VBox(4.0);
+
+                            Label lblAutor = new Label("IETI:");
+                            lblAutor.setStyle("-fx-font-size: 15px; -fx-font-weight: bold;");
+
+                            Label lblCuerpo = new Label(fragment);
+                            lblCuerpo.setStyle("-fx-font-size: 13px;");
+                            lblCuerpo.setWrapText(true);
+
+                            contenedor.getChildren().addAll(lblAutor, lblCuerpo);
+                            historial.getChildren().add(contenedor);
+
+                            cuerpoIETIActual = lblCuerpo;
+                        } else {
+                            cuerpoIETIActual.setText(cuerpoIETIActual.getText() + fragment);
+                        }
+                        scrollPane.setVvalue(1.0);
+                    })
                 ).whenComplete((reply, ex) ->
                         Platform.runLater(() -> {
                             if (ex != null) {
-                                textInfo.setText(textInfo.getText() + "No se pudo obtener respuesta.\n");
+                                if (cuerpoIETIActual == null) {
+                                    agregarMensaje("IETI:", "No se pudo obtener respuesta.\n");
+                                } else {
+                                    cuerpoIETIActual.setText(cuerpoIETIActual.getText() + "No se pudo obtener respuesta.\n");
+                                }
                             } else {
-                                textInfo.setText(textInfo.getText() + "\n");
+                                if (cuerpoIETIActual != null) {
+                                    cuerpoIETIActual.setText(cuerpoIETIActual.getText() + "\n");
+                                }
                             }
+                            cuerpoIETIActual = null;
                             scrollPane.setVvalue(1.0);
                             isWaiting = false;
                             buttonSend.setDisable(false);
                         }));
             }
-
-
 
         } else {
             textField.requestFocus();
