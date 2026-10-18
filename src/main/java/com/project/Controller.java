@@ -31,6 +31,9 @@ public class Controller implements Initializable {
     // Referencia al Label del cuerpo durante el streaming de la IA
     private Label cuerpoIETIActual = null;
 
+    // Referencia al Label "Thinking..." de la rama de mensaje + imagen
+    private Label labelThinkingActual = null;
+
     @FXML
     private ScrollPane scrollPane;
 
@@ -49,6 +52,11 @@ public class Controller implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         textField.setOnAction(this::sendMessage);
+
+        // Autoscroll: cada vez que la altura del historial cambie, bajar el scroll al final
+        historial.heightProperty().addListener((obs, oldVal, newVal) ->
+            Platform.runLater(() -> scrollPane.setVvalue(1.0))
+        );
     }
 
     @FXML
@@ -92,6 +100,7 @@ public class Controller implements Initializable {
         Label lblTexto = new Label(texto);
         lblTexto.setStyle("-fx-font-size: 13px;");
         lblTexto.setWrapText(true);
+        lblTexto.setMaxWidth(Double.MAX_VALUE);
 
         contenedor.getChildren().addAll(lblAutor, lblTexto);
 
@@ -131,13 +140,35 @@ public class Controller implements Initializable {
 
             // Respuesta de la IA asincrona
             if (base64 != null) {
+                // Mostrar "Thinking..." grisáceo antes de enviar la petición
+                labelThinkingActual = new Label("Thinking...");
+                labelThinkingActual.setStyle("-fx-font-size: 13px; -fx-text-fill: #888888;");
+                labelThinkingActual.setWrapText(true);
+                labelThinkingActual.setMaxWidth(Double.MAX_VALUE);
+                VBox contenedorThinking = new VBox(4.0);
+                Label lblAutorThinking = new Label("IETI:");
+                lblAutorThinking.setStyle("-fx-font-size: 15px; -fx-font-weight: bold;");
+                contenedorThinking.getChildren().addAll(lblAutorThinking, labelThinkingActual);
+                historial.getChildren().add(contenedorThinking);
+                scrollPane.setVvalue(1.0);
+
                 // Se envía la imagen
                 chatService.sendMessageWithImage(msg, base64).whenComplete((reply, ex) ->
                         Platform.runLater(() -> {
-                            if (ex != null) {
-                                agregarMensaje("IETI:", "No se pudo obtener respuesta.\n");
+                            if (labelThinkingActual != null) {
+                                if (ex != null) {
+                                    labelThinkingActual.setText("No se pudo obtener respuesta.");
+                                } else {
+                                    labelThinkingActual.setText(reply != null ? reply : "");
+                                }
+                                labelThinkingActual.setStyle("-fx-font-size: 13px;");
+                                labelThinkingActual = null;
                             } else {
-                                agregarMensaje("IETI:", reply + "\n");
+                                if (ex != null) {
+                                    agregarMensaje("IETI:", "No se pudo obtener respuesta.\n");
+                                } else {
+                                    agregarMensaje("IETI:", reply + "\n");
+                                }
                             }
                             scrollPane.setVvalue(1.0);
                             base64 = null;
@@ -158,6 +189,7 @@ public class Controller implements Initializable {
                             Label lblCuerpo = new Label(fragment);
                             lblCuerpo.setStyle("-fx-font-size: 13px;");
                             lblCuerpo.setWrapText(true);
+                            lblCuerpo.setMaxWidth(Double.MAX_VALUE);
 
                             contenedor.getChildren().addAll(lblAutor, lblCuerpo);
                             historial.getChildren().add(contenedor);
