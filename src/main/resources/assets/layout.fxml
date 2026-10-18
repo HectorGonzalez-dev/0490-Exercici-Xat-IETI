@@ -7,19 +7,23 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Button?>
 
-<BorderPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.project.Controller">
-    <center>
-        <ScrollPane fx:id="scrollPane" hbarPolicy="NEVER" prefHeight="357.0" prefWidth="397.0">
-            <content>
-                <VBox fx:id="historial" spacing="8.0" prefWidth="480.0"/>
-            </content>
-        </ScrollPane>
-    </center>
-    <bottom>
-        <HBox spacing="8.0" alignment="CENTER">
-            <Button fx:id="buttonImage" text="Imagen" onAction="#selectImage"/>
-            <TextField fx:id="textField" promptText="Escribe un mensaje..." HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-            <Button fx:id="buttonSend" text="Enviar" onAction="#sendMessage"/>
-        </HBox>
-    </bottom>
-</BorderPane>
+<VBox prefHeight="400.0" prefWidth="600.0" style="-fx-padding: 20;" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.project.Controller">
+    <VBox style="-fx-padding: 10; -fx-border-color: #555555; -fx-border-width: 2; -fx-border-radius: 15; -fx-background-radius: 15;">
+        <BorderPane>
+            <center>
+                <ScrollPane fx:id="scrollPane" hbarPolicy="NEVER" prefHeight="357.0" prefWidth="397.0">
+                    <content>
+                        <VBox fx:id="historial" spacing="8.0"/>
+                    </content>
+                </ScrollPane>
+            </center>
+            <bottom>
+                <HBox spacing="8.0" alignment="CENTER">
+                    <Button fx:id="buttonImage" text="Imagen" onAction="#selectImage"/>
+                    <TextField fx:id="textField" promptText="Escribe un mensaje..." HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                    <Button fx:id="buttonSend" text="Enviar" onAction="#sendMessage"/>
+                </HBox>
+            </bottom>
+        </BorderPane>
+    </VBox>
+</VBox>

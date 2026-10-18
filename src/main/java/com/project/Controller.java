@@ -93,6 +93,7 @@ public class Controller implements Initializable {
 
     private void agregarMensaje(String autor, String texto, Image imagen) {
         VBox contenedor = new VBox(4.0);
+        contenedor.setMaxWidth(600);
 
         Label lblAutor = new Label(autor);
         lblAutor.setStyle("-fx-font-size: 15px; -fx-font-weight: bold;");
@@ -100,7 +101,7 @@ public class Controller implements Initializable {
         Label lblTexto = new Label(texto);
         lblTexto.setStyle("-fx-font-size: 13px;");
         lblTexto.setWrapText(true);
-        lblTexto.setMaxWidth(Double.MAX_VALUE);
+        lblTexto.setMaxWidth(600);
 
         contenedor.getChildren().addAll(lblAutor, lblTexto);
 
@@ -131,7 +132,6 @@ public class Controller implements Initializable {
                 imagen = new Image(selectedImage.toURI().toString());
             }
             agregarMensaje("Tú:", msg, imagen);
-            scrollPane.setVvalue(1.0);
             textField.clear();
             textField.requestFocus();
             isWaiting = true;
@@ -144,8 +144,9 @@ public class Controller implements Initializable {
                 labelThinkingActual = new Label("Thinking...");
                 labelThinkingActual.setStyle("-fx-font-size: 13px; -fx-text-fill: #888888;");
                 labelThinkingActual.setWrapText(true);
-                labelThinkingActual.setMaxWidth(Double.MAX_VALUE);
+                labelThinkingActual.setMaxWidth(600);
                 VBox contenedorThinking = new VBox(4.0);
+                contenedorThinking.setMaxWidth(600);
                 Label lblAutorThinking = new Label("IETI:");
                 lblAutorThinking.setStyle("-fx-font-size: 15px; -fx-font-weight: bold;");
                 contenedorThinking.getChildren().addAll(lblAutorThinking, labelThinkingActual);
@@ -182,6 +183,7 @@ public class Controller implements Initializable {
                     Platform.runLater(() -> {
                         if (cuerpoIETIActual == null) {
                             VBox contenedor = new VBox(4.0);
+                            contenedor.setMaxWidth(600);
 
                             Label lblAutor = new Label("IETI:");
                             lblAutor.setStyle("-fx-font-size: 15px; -fx-font-weight: bold;");
@@ -189,7 +191,7 @@ public class Controller implements Initializable {
                             Label lblCuerpo = new Label(fragment);
                             lblCuerpo.setStyle("-fx-font-size: 13px;");
                             lblCuerpo.setWrapText(true);
-                            lblCuerpo.setMaxWidth(Double.MAX_VALUE);
+                            lblCuerpo.setMaxWidth(600);
 
                             contenedor.getChildren().addAll(lblAutor, lblCuerpo);
                             historial.getChildren().add(contenedor);
