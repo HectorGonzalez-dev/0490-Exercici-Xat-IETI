@@ -22,6 +22,7 @@
     </center>
     <bottom>
         <HBox spacing="8.0" alignment="CENTER">
+            <Button fx:id="buttonImage" text="Imagen" onAction="#selectImage"/>
             <TextField fx:id="textField" promptText="Escribe un mensaje..." HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
             <Button fx:id="buttonSend" text="Enviar" onAction="#sendMessage"/>
         </HBox>
