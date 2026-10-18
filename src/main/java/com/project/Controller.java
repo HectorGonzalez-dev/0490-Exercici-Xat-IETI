@@ -9,7 +9,10 @@ import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.util.Base64;
 import java.util.ResourceBundle;
 
 import javafx.application.Platform;
@@ -20,6 +23,7 @@ public class Controller implements Initializable {
     private final ChatService chatService = new ChatService();
     private boolean isWaiting = false;
     private File selectedImage = null;
+    private String base64 = null;
 
     @FXML
     private ScrollPane scrollPane;
@@ -60,7 +64,12 @@ public class Controller implements Initializable {
         // Guardar el archivo seleccionado
         if (archivo != null) {
             selectedImage = archivo;
-            System.out.println("Archivo seleccionado: " + selectedImage.getAbsolutePath());
+            try {
+                byte[] bytes = Files.readAllBytes(selectedImage.toPath());
+                base64 = Base64.getEncoder().encodeToString(bytes);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -80,31 +89,49 @@ public class Controller implements Initializable {
             isWaiting = true;
             buttonSend.setDisable(true);
 
-            // Array boolean[] porque Java no permite reasignar una variable local normal dentro de un lambda
-            boolean[] primeraVez = {true};
-
             // Respuesta de la IA asincrona
-            chatService.streamMessage(msg, fragment -> 
-                Platform.runLater(() -> {
-                        if (primeraVez[0]) {
-                            textInfo.setText(textInfo.getText() + "IETI: " + fragment);
-                            primeraVez[0] = false;
-                        } else {
-                            textInfo.setText(textInfo.getText() + fragment);
-                        }
-                        scrollPane.setVvalue(1.0);
-                    })
-            ).whenComplete((reply, ex) ->
+            if (base64 != null) {
+                chatService.sendMessageWithImage(msg, base64).whenComplete((reply, ex) ->
+                        Platform.runLater(() -> {
+                            if (ex != null) {
+                                textInfo.setText(textInfo.getText() + "No se pudo obtener respuesta.\n");
+                            } else {
+                                textInfo.setText(textInfo.getText() + "IETI: " + reply + "\n");
+                            }
+                            scrollPane.setVvalue(1.0);
+                            base64 = null;
+                            selectedImage = null;
+                            isWaiting = false;
+                            buttonSend.setDisable(false);
+                        }));
+            } else {
+                // Array boolean[] porque Java no permite reasignar una variable local normal dentro de un lambda
+                boolean[] primeraVez = {true};
+
+                chatService.streamMessage(msg, fragment -> 
                     Platform.runLater(() -> {
-                        if (ex != null) {
-                            textInfo.setText(textInfo.getText() + "No se pudo obtener respuesta.\n");
-                        } else {
-                            textInfo.setText(textInfo.getText() + "\n");
-                        }
-                        scrollPane.setVvalue(1.0);
-                        isWaiting = false;
-                        buttonSend.setDisable(false);
-                    }));
+                            if (primeraVez[0]) {
+                                textInfo.setText(textInfo.getText() + "IETI: " + fragment);
+                                primeraVez[0] = false;
+                            } else {
+                                textInfo.setText(textInfo.getText() + fragment);
+                            }
+                            scrollPane.setVvalue(1.0);
+                        })
+                ).whenComplete((reply, ex) ->
+                        Platform.runLater(() -> {
+                            if (ex != null) {
+                                textInfo.setText(textInfo.getText() + "No se pudo obtener respuesta.\n");
+                            } else {
+                                textInfo.setText(textInfo.getText() + "\n");
+                            }
+                            scrollPane.setVvalue(1.0);
+                            isWaiting = false;
+                            buttonSend.setDisable(false);
+                        }));
+            }
+
+
 
         } else {
             textField.requestFocus();

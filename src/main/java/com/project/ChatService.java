@@ -36,7 +36,7 @@ public class ChatService {
     public CompletableFuture<Void> streamMessage(String message, Consumer<String> onLine) {
         try {
 
-            String jsonBody = buildRequestJson(message, true);
+            String jsonBody = buildRequestJson(message);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(MODEL_URL))
@@ -72,10 +72,10 @@ public class ChatService {
         }
     }
 
-    public CompletableFuture<String> sendMessage(String message) {
+    public CompletableFuture<String> sendMessageWithImage(String message, String base64Image) {
         try {
 
-            String jsonBody = buildRequestJson(message, false);
+            String jsonBody = buildRequestMultimodal(message, base64Image);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(MODEL_URL))
@@ -119,7 +119,7 @@ public class ChatService {
         return textResponse;
     }
 
-    private String buildRequestJson(String message, boolean stream) {
+    private String buildRequestJson(String message) {
         JSONArray messages = new JSONArray();
         messages.put(new JSONObject()
                 .put("role", "user")
@@ -128,7 +128,36 @@ public class ChatService {
         JSONObject body = new JSONObject()
                 .put("model", MODEL_NAME)
                 .put("messages", messages)
-                .put("stream", stream);
+                .put("stream", true);
+
+        return body.toString();
+    }
+
+    private String buildRequestMultimodal(String message, String base64Image) {
+        JSONObject text = new JSONObject()
+                .put("type", "text")
+                .put("text", message);
+
+        JSONObject url = new JSONObject()
+                .put("url", "data:image/jpeg;base64," + base64Image);
+
+        JSONObject image = new JSONObject()
+                .put("type", "image_url")
+                .put("image_url", url);
+
+        JSONArray content = new JSONArray();
+        content.put(text);
+        content.put(image);
+
+        JSONArray messages = new JSONArray();
+        messages.put(new JSONObject()
+                .put("role", "user")
+                .put("content", content));
+
+        JSONObject body = new JSONObject()
+                .put("model", MODEL_NAME)
+                .put("messages", messages)
+                .put("stream", false);
 
         return body.toString();
     }
