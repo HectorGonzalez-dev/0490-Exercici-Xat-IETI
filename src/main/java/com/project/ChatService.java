@@ -25,6 +25,7 @@ public class ChatService {
     private static final String MODEL_KEY = loadApiKey();
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private volatile InputStream activeStream = null;
 
     /* 
     public static void main(String[] args) {
@@ -49,6 +50,8 @@ public class ChatService {
                 httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream());
 
             return response.thenApply(httpResponse -> {
+                activeStream = httpResponse.body();
+
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(httpResponse.body(), StandardCharsets.UTF_8))) {
 
@@ -64,6 +67,8 @@ public class ChatService {
                     return null;
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
+                } finally {
+                    activeStream = null;
                 }
             });
         } catch (Exception e) {
@@ -183,6 +188,16 @@ public class ChatService {
 
         } catch (IOException e) {
             throw new IllegalStateException("Error al leer config.properties", e);
+        }
+    }
+
+    public void cancel() {
+        try {
+            if (activeStream != null) {
+                activeStream.close();
+            }
+        } catch (IOException e) {
+            System.err.println("Error al cerrar el stream: " + e.getMessage());
         }
     }
 

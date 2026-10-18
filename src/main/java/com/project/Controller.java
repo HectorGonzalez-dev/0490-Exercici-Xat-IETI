@@ -17,6 +17,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.util.Base64;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -25,8 +26,10 @@ public class Controller implements Initializable {
 
     private final ChatService chatService = new ChatService();
     private boolean isWaiting = false;
+    private boolean stoppedByUser = false;
     private File selectedImage = null;
     private String base64 = null;
+    private CompletableFuture<?> activeRequest = null;
 
     // Referencia al Label del cuerpo durante el streaming de la IA
     private Label cuerpoIETIActual = null;
@@ -121,7 +124,16 @@ public class Controller implements Initializable {
     private void sendMessage(ActionEvent event) {
 
         if (isWaiting) {
-            return;
+            if (event.getSource() == buttonSend) {
+                stoppedByUser = true;
+                activeRequest.cancel(true);
+                chatService.cancel();
+                isWaiting = false;
+                buttonSend.setText("Enviar");
+                activeRequest = null;
+            } else {
+                return;
+            }
         }
 
         String msg = textField.getText().trim();
@@ -135,7 +147,7 @@ public class Controller implements Initializable {
             textField.clear();
             textField.requestFocus();
             isWaiting = true;
-            buttonSend.setDisable(true);
+            stoppedByUser = false;
             cuerpoIETIActual = null;
 
             // Respuesta de la IA asincrona
@@ -154,18 +166,26 @@ public class Controller implements Initializable {
                 scrollPane.setVvalue(1.0);
 
                 // Se envía la imagen
-                chatService.sendMessageWithImage(msg, base64).whenComplete((reply, ex) ->
+                activeRequest = chatService.sendMessageWithImage(msg, base64).whenComplete((reply, ex) ->
                         Platform.runLater(() -> {
                             if (labelThinkingActual != null) {
-                                if (ex != null) {
+                                if (stoppedByUser) {
+                                    labelThinkingActual.setText("Se detuvo la respuesta.");
+                                    labelThinkingActual.setStyle("-fx-font-size: 13px;");
+                                    labelThinkingActual = null;
+                                } else if (ex != null) {
                                     labelThinkingActual.setText("No se pudo obtener respuesta.");
+                                    labelThinkingActual.setStyle("-fx-font-size: 13px;");
+                                    labelThinkingActual = null;
                                 } else {
                                     labelThinkingActual.setText(reply != null ? reply : "");
+                                    labelThinkingActual.setStyle("-fx-font-size: 13px;");
+                                    labelThinkingActual = null;
                                 }
-                                labelThinkingActual.setStyle("-fx-font-size: 13px;");
-                                labelThinkingActual = null;
                             } else {
-                                if (ex != null) {
+                                if (stoppedByUser) {
+                                    agregarMensaje("IETI:", "Se detuvo la respuesta.\n");
+                                } else if (ex != null) {
                                     agregarMensaje("IETI:", "No se pudo obtener respuesta.\n");
                                 } else {
                                     agregarMensaje("IETI:", reply + "\n");
@@ -175,11 +195,14 @@ public class Controller implements Initializable {
                             base64 = null;
                             selectedImage = null;
                             isWaiting = false;
-                            buttonSend.setDisable(false);
+                            activeRequest = null;
+                            buttonSend.setText("Enviar");
+                            stoppedByUser = false;
                         }));
+                buttonSend.setText("Detener");
             } else {
                 // Streaming de respuesta solo texto
-                chatService.streamMessage(msg, fragment ->
+                activeRequest = chatService.streamMessage(msg, fragment ->
                     Platform.runLater(() -> {
                         if (cuerpoIETIActual == null) {
                             VBox contenedor = new VBox(4.0);
@@ -204,7 +227,18 @@ public class Controller implements Initializable {
                     })
                 ).whenComplete((reply, ex) ->
                         Platform.runLater(() -> {
-                            if (ex != null) {
+                            if (stoppedByUser == true) {
+                                if (cuerpoIETIActual == null) {
+                                    agregarMensaje("IETI:", "Se detuvo la respuesta.\n");
+                                }
+                                cuerpoIETIActual = null;
+                                isWaiting = false;
+                                activeRequest = null;
+                                buttonSend.setText("Enviar");
+                                scrollPane.setVvalue(1.0);
+                                stoppedByUser = false;
+                                return;
+                            } else if (ex != null) {
                                 if (cuerpoIETIActual == null) {
                                     agregarMensaje("IETI:", "No se pudo obtener respuesta.\n");
                                 } else {
@@ -218,8 +252,11 @@ public class Controller implements Initializable {
                             cuerpoIETIActual = null;
                             scrollPane.setVvalue(1.0);
                             isWaiting = false;
-                            buttonSend.setDisable(false);
+                            stoppedByUser = false;
+                            activeRequest = null;
+                            buttonSend.setText("Enviar");
                         }));
+                buttonSend.setText("Detener");
             }
 
         } else {
